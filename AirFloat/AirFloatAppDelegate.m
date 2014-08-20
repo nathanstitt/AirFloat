@@ -37,9 +37,9 @@
 
 @interface AirFloatAppDelegate () {
     
-    NSDictionary* _settings;
-    
 }
+
+- (void)setSettings;
 
 @end
 
@@ -49,51 +49,19 @@
 @synthesize appViewController=_appViewController;
 @synthesize server=_server;
 
-- (NSString *)settingsPath {
-    
-    NSString* filename = [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingPathExtension:@"plist"];
-    
-#if TARGET_IPHONE_SIMULATOR
-    NSString* path = [[NSString stringWithFormat:@"/Users/%@/Library/Preferences/", NSUserName()] stringByAppendingPathComponent:filename];
-#else
-    NSString* path = [@"/var/mobile/Library/Preferences/" stringByAppendingPathComponent:filename];
-#endif
-    
-    return path;
-    
-}
 
-- (NSDictionary *)settings {
-    
-    if (!_settings) {
-        _settings = [[NSDictionary alloc] initWithContentsOfFile:[self settingsPath]];
-        _settings = (_settings ?: [[NSDictionary alloc] init]);
-    }
-    
-    return _settings;
-    
-}
 
-- (void)setSettings:(NSDictionary *)settings {
-    
-    [self willChangeValueForKey:@"settings"];
-    
-    [_settings release];
-    _settings = [settings copy];
-    
-    [_settings writeToFile:[self settingsPath]
-                atomically:YES];
+- (void)setSettings {
     
     if (self.server) {
         
-        NSString* password = [_settings objectForKey:@"password"];
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        NSString* password = [defaults objectForKey:@"password"];
         
-        raop_server_set_settings(self.server, (struct raop_server_settings_t) { [[_settings objectForKey:@"name"] cStringUsingEncoding:NSASCIIStringEncoding], ([[_settings objectForKey:@"authenticationEnabled"] boolValue] && password && [password length] > 0 ? [[_settings objectForKey:@"password"] cStringUsingEncoding:NSUTF8StringEncoding] : NULL) });
-        
+        raop_server_set_settings(self.server, (struct raop_server_settings_t) { [[defaults objectForKey:@"name"] cStringUsingEncoding:NSASCIIStringEncoding], ([defaults integerForKey:@"authenticationEnabled"] && password && [password length] > 0 ? [password cStringUsingEncoding:NSUTF8StringEncoding] : NULL) });
     }
     
-    [self didChangeValueForKey:@"settings"];
-        
+    
 }
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
@@ -102,12 +70,14 @@
     
     self.window = [[[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds] autorelease];
     
+    
     if ([self.window respondsToSelector:@selector(setRootViewController:)])
         self.window.rootViewController = self.appViewController;
     else {
         self.appViewController.view.frame = CGRectMake(0, 20, 320, 460);
         [self.window addSubview:self.appViewController.view];
     }
+     
     
     [self.window makeKeyAndVisible];
     
@@ -119,9 +89,22 @@
     
     if (!self.server) {
         
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        
+        if (![[defaults objectForKey:@"firstStart"]isEqualToString:@"F"]) {
+            [defaults setObject:@"F" forKey:@"firstStart"];
+            [defaults setObject:@"AirFloat" forKey:@"name"];
+            [defaults setInteger:0 forKey:@"authenticationEnabled"];
+            [defaults setInteger:0 forKey:@"keepScreenLit"];
+            [defaults setInteger:0 forKey:@"keepScreenLitOnlyWhenConnectedToPower"];
+            [defaults setInteger:0 forKey:@"keepScreenLitOnlyWhenReceiving"];
+            [defaults synchronize];
+            defaults = [NSUserDefaults standardUserDefaults];
+        }
+        
         struct raop_server_settings_t settings;
-        settings.name = [[self.settings objectForKey:@"name"] cStringUsingEncoding:NSUTF8StringEncoding];
-        settings.password = ([[self.settings objectForKey:@"authenticationEnabled"] boolValue] ? [[self.settings objectForKey:@"password"] cStringUsingEncoding:NSUTF8StringEncoding] : NULL);
+        settings.name = [[defaults objectForKey:@"name"] cStringUsingEncoding:NSUTF8StringEncoding];
+        settings.password = ([defaults integerForKey:@"authenticationEnabled"]  ? [[defaults objectForKey:@"password"] cStringUsingEncoding:NSUTF8StringEncoding] : NULL);
         
         self.server = raop_server_create(settings);
         

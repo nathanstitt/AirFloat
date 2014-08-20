@@ -33,7 +33,7 @@
 
 @implementation AirFloatFlipInView
 
-- (id)initWithFrame:(CGRect)frame {
+- (instancetype)initWithFrame:(CGRect)frame {
     
     if ((self = [super initWithFrame:frame]))
         [self awakeFromNib];
@@ -61,35 +61,27 @@
 
     CAKeyframeAnimation* rotateAnimation = [CAKeyframeAnimation animationWithKeyPath:@"transform"];
     
-    rotateAnimation.values = [NSArray arrayWithObjects:
-                              [NSValue valueWithCATransform3D:CATransform3DMakeRotation(M_PI_2, 1, 0, 0)], 
+    rotateAnimation.values = @[[NSValue valueWithCATransform3D:CATransform3DMakeRotation(M_PI_2, 1, 0, 0)], 
                               [NSValue valueWithCATransform3D:CATransform3DMakeRotation(-M_PI_2 / 2, 1, 0, 0)],
                               [NSValue valueWithCATransform3D:CATransform3DMakeRotation(M_PI_2 / 8, 1, 0, 0)],
-                              [NSValue valueWithCATransform3D:CATransform3DMakeRotation(0, 1, 0, 0)],
-                              nil];
+                              [NSValue valueWithCATransform3D:CATransform3DMakeRotation(0, 1, 0, 0)]];
     
-    rotateAnimation.timingFunctions = [NSArray arrayWithObjects:
-                                       [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn], 
+    rotateAnimation.timingFunctions = @[[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn], 
                                        [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut],
                                        [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut],
-                                       [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut],
-                                       nil];
+                                       [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut]];
         
     CAKeyframeAnimation* opacityAnimation = [CAKeyframeAnimation animationWithKeyPath:@"opacity"];
     
-    opacityAnimation.values = [NSArray arrayWithObjects:
-                               [NSNumber numberWithDouble:0.0],
-                               [NSNumber numberWithDouble:0.0],
-                               [NSNumber numberWithDouble:1.0],
-                               [NSNumber numberWithDouble:1.0],
-                               nil];
+    opacityAnimation.values = @[@0.0,
+                               @0.0,
+                               @1.0,
+                               @1.0];
     
-    opacityAnimation.keyTimes = [NSArray arrayWithObjects:
-                                 [NSNumber numberWithDouble:0.0],
-                                 [NSNumber numberWithDouble:0.05],
-                                 [NSNumber numberWithDouble:0.1],
-                                 [NSNumber numberWithDouble:1.0],
-                                 nil];
+    opacityAnimation.keyTimes = @[@0.0,
+                                 @0.05,
+                                 @0.1,
+                                 @1.0];
     
     rotateAnimation.duration = opacityAnimation.duration = 1.0;
     rotateAnimation.removedOnCompletion = opacityAnimation.removedOnCompletion = NO;

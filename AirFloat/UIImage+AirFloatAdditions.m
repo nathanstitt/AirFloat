@@ -96,7 +96,7 @@
             
             CIFilter *filter = [CIFilter filterWithName:@"CIGaussianBlur"
                                           keysAndValues:kCIInputImageKey, clampedImage,
-                                @"inputRadius", [NSNumber numberWithDouble:radius],
+                                @"inputRadius", [NSNumber numberWithDouble:(double)radius],
                                 nil];
             
             CIImage *outputImage = [filter outputImage];

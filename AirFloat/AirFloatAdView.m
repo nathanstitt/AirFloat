@@ -43,7 +43,7 @@
 
 #pragma mark - Allocation / Deallocation
 
-- (id)initWithFrame:(CGRect)frame {
+- (instancetype)initWithFrame:(CGRect)frame {
     
     if ((self = [super initWithFrame:frame]))
         [self awakeFromNib];
@@ -109,13 +109,13 @@
         _timers = [[NSMutableArray alloc] init];
         
         [UIView animateWithDuration:1.0
-                              delay:0.0
+                              delay:0.5
                             options:UIViewAnimationOptionCurveEaseOut
                          animations:^{
                              self.alpha = 0.0;
                          } completion:^(BOOL finished) {
                              while ([self.subviews count] > 0)
-                                 [[self.subviews objectAtIndex:0] removeFromSuperview];
+                                 [(self.subviews)[0] removeFromSuperview];
                              _currentImage = 0;
                              _isAnimating = NO;
                              self.alpha = 1.0;
@@ -157,19 +157,19 @@
     
     self.hidden = NO;
     
-    NSDictionary* image = [self.images objectAtIndex:_currentImage++];
+    NSDictionary* image = (self.images)[_currentImage++];
     
     if (_currentImage == [self.images count])
         _currentImage = 0;
     
     UIView* nextView = [[UIView alloc] initWithFrame:self.bounds];
     
-    UIImageView* imageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:[image objectForKey:@"AirFloatAdImage"]]];
+    UIImageView* imageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:image[@"AirFloatAdImage"]]];
     
     CGRect frame = imageView.frame;
     
-    CGPoint anchorPoint = CGPointMake([[[image objectForKey:@"AirFloatAdImageCenter"] objectForKey:@"x"] doubleValue] / imageView.frame.size.width,
-                                              [[[image objectForKey:@"AirFloatAdImageCenter"] objectForKey:@"y"] doubleValue] / imageView.frame.size.height);
+    CGPoint anchorPoint = CGPointMake([image[@"AirFloatAdImageCenter"][@"x"] doubleValue] / imageView.frame.size.width,
+                                              [image[@"AirFloatAdImageCenter"][@"y"] doubleValue] / imageView.frame.size.height);
     imageView.layer.anchorPoint = anchorPoint;
     
     imageView.frame = frame;
@@ -187,8 +187,8 @@
     
     imageView.layer.transform = CATransform3DMakeScale(startScale, startScale, 1.0);
     
-    CGPoint startCenter = CGPointMake([[[image objectForKey:@"AirFloatAdScreenCenter"] objectForKey:@"x"] doubleValue] * self.bounds.size.width,
-                                      [[[image objectForKey:@"AirFloatAdScreenCenter"] objectForKey:@"y"] doubleValue] * self.bounds.size.height);
+    CGPoint startCenter = CGPointMake([image[@"AirFloatAdScreenCenter"][@"x"] doubleValue] * self.bounds.size.width,
+                                      [image[@"AirFloatAdScreenCenter"][@"y"] doubleValue] * self.bounds.size.height);
     
     CGPoint endCenter = startCenter;
     
@@ -208,18 +208,18 @@
     
     nextView.autoresizingMask = textView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
     
-    NSArray* adText = [image objectForKey:@"AirFloatAdTexts"];
+    NSArray* adText = image[@"AirFloatAdTexts"];
     
     for (NSInteger i = 0 ; i < [adText count] ; i++) {
         
         CGFloat fontSize = ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone ? 36 : 52);
         
         UILabel* label = [[UILabel alloc] initWithFrame:CGRectZero];
-        label.text = [[adText objectAtIndex:i] objectForKey:@"AirFloatAdText"];
+        label.text = adText[i][@"AirFloatAdText"];
         label.font = [UIFont fontWithName:@"HelveticaNeue-UltraLight" size:fontSize];
         if ([[UIDevice currentDevice].systemVersion doubleValue] < 5)
             label.font = [UIFont fontWithName:@"HelveticaNeue" size:fontSize];
-        if ([[[adText objectAtIndex:i] objectForKey:@"AirFloatAdTextIsBold"] boolValue])
+        if ([adText[i][@"AirFloatAdTextIsBold"] boolValue])
             label.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:fontSize];
         
         label.textColor = [UIColor whiteColor];
@@ -233,7 +233,7 @@
         
         UIViewAutoresizing autoresizingMask = UIViewAutoresizingNone;
         
-        if ([[[image objectForKey:@"AirFloatAdTextPosition"] objectForKey:@"AirFloatVertical"] isEqualToString:@"bottom"]) {
+        if ([image[@"AirFloatAdTextPosition"][@"AirFloatVertical"] isEqualToString:@"bottom"]) {
             flipFrame.origin.y = self.frame.size.height - (([adText count] - i) * (flipFrame.size.height + 8)) - 2;
             autoresizingMask |= UIViewAutoresizingFlexibleTopMargin;
         } else {
@@ -241,7 +241,7 @@
             autoresizingMask |= UIViewAutoresizingFlexibleBottomMargin;
         }
         
-        if ([[[image objectForKey:@"AirFloatAdTextPosition"] objectForKey:@"AirFloatHorizontal"] isEqualToString:@"left"]) {
+        if ([image[@"AirFloatAdTextPosition"][@"AirFloatHorizontal"] isEqualToString:@"left"]) {
             flipFrame.origin.x = 10;
             autoresizingMask |= UIViewAutoresizingFlexibleRightMargin;
         } else {
@@ -253,14 +253,14 @@
         flipView.backgroundColor = [UIColor blackColor];
         flipView.autoresizingMask = autoresizingMask;
         
-        if ([[image objectForKey:@"AirFloatAdTextColor"] isEqualToString:@"black"]) {
+        if ([image[@"AirFloatAdTextColor"] isEqualToString:@"black"]) {
             label.textColor = [UIColor blackColor];
             flipView.backgroundColor = label.backgroundColor = [UIColor whiteColor];
         }
         
         CGRect labelFrame = label.frame;
 
-        if ([[[image objectForKey:@"AirFloatAdTextPosition"] objectForKey:@"AirFloatHorizontal"] isEqualToString:@"left"])
+        if ([image[@"AirFloatAdTextPosition"][@"AirFloatHorizontal"] isEqualToString:@"left"])
             labelFrame.origin.x = 10;
         else
             labelFrame.origin.x = flipFrame.size.width - labelFrame.size.width - 10;
@@ -272,7 +272,7 @@
         
         [textView addSubview:flipView];
         
-        NSTimer* timer = [[NSTimer alloc] initWithFireDate:[NSDate dateWithTimeIntervalSinceNow:[[[adText objectAtIndex:i] objectForKey:@"AirFloatAdDelay"] doubleValue] + 2]
+        NSTimer* timer = [[NSTimer alloc] initWithFireDate:[NSDate dateWithTimeIntervalSinceNow:[adText[i][@"AirFloatAdDelay"] doubleValue] + 2]
                                                   interval:0
                                                     target:self
                                                   selector:@selector(_doFlip:)
@@ -292,9 +292,9 @@
     
     UIView* oldView = nil;
     if ([self.subviews count] > 0)
-        oldView = [self.subviews objectAtIndex:0];
+        oldView = (self.subviews)[0];
     
-    NSTimeInterval duration = [[image objectForKey:@"AirFloatAdDuration"] doubleValue];
+    NSTimeInterval duration = [image[@"AirFloatAdDuration"] doubleValue];
     
     [UIView animateWithDuration:1.0
                           delay:0.0
@@ -346,7 +346,7 @@
         
         for (UIView* view in self.subviews) {
             
-            UIView* imageView = [view.subviews objectAtIndex:0];
+            UIView* imageView = (view.subviews)[0];
             
             CGPoint center = imageView.center;
             center.x += frameDiff.x;

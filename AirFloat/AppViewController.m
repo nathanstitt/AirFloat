@@ -38,11 +38,11 @@
 
 #import "AirFloatAppDelegate.h"
 #import "AirFloatAdView.h"
-#import "SupportViewController.h"
 #import "SettingsViewController.h"
 #import "AppViewController.h"
 
-@interface AppViewController () {
+
+@interface AppViewController () <UINavigationBarDelegate> {
     
     raop_server_p _server;
     dacp_client_p _dacp_client;
@@ -52,18 +52,15 @@
     
 }
 
-@property (nonatomic, strong) IBOutlet UIButton* supportButton;
-@property (nonatomic, strong) IBOutlet UIButton* settingsButton;
 @property (nonatomic, strong) IBOutlet AirFloatAdView* adView;
-@property (nonatomic, strong) IBOutlet UIView* topView;
-@property (nonatomic, strong) IBOutlet UIView* bottomView;
 @property (nonatomic, strong) IBOutlet UIImageView* artworkImageView;
-@property (nonatomic, strong) IBOutlet UIImageView* blurredArtworkImageView;
 @property (nonatomic, strong) IBOutlet UILabel* trackTitelLabel;
 @property (nonatomic, strong) IBOutlet UILabel* artistNameLabel;
 @property (nonatomic, strong) IBOutletCollection(UIButton) NSArray* controlButtons;
 @property (nonatomic, strong) IBOutlet UIButton* playButton;
 @property (nonatomic, strong) IBOutlet UIView* overlaidViewContainer;
+@property (nonatomic, strong) IBOutlet MPVolumeView* volumeView;
+
 
 - (void)clientStartedRecording;
 - (void)clientEndedRecording;
@@ -74,9 +71,11 @@
 - (void)updatePlaybackState;
 - (void)updateControlsAvailability;
 
+
 @end
 
 UIBackgroundTaskIdentifier backgroundTask = 0;
+
 
 void dacpClientControlsBecameAvailable(dacp_client_p client, void* ctx) {
     
@@ -204,12 +203,16 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
 
 @implementation AppViewController
 
+- (UIBarPosition)positionForBar:(id<UIBarPositioning>)bar
+{
+    return UIBarPositionTopAttached;
+}
+
 - (void)dealloc {
     
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     
     self.adView = nil;
-    self.topView = self.bottomView = nil;
     self.artworkImageView = nil;
     self.trackTitelLabel = self.artistNameLabel = nil;
     
@@ -241,23 +244,17 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
     
 }
 
-- (void)updateBlurredArtwork {
-    
-    if (raop_server_is_recording(self.server))
-        [NSThread detachNewThreadSelector:@selector(setAndScaleImage:) toTarget:self withObject:self.artworkImageView.image];
-    
-}
 
 - (void)applicationDidBecomeActive:(NSNotification *)notification {
-    
-    // OpenGL ES is not always ready at this point. Wait a sec.
-    [self performSelector:@selector(updateBlurredArtwork) withObject:nil afterDelay:1.0];
     
 }
 
 - (void)viewDidLoad {
     
     [super viewDidLoad];
+    
+    self.volumeView.showsRouteButton = NO;
+    self.volumeView.tintColor = [UIColor grayColor];
     
     if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
         [self.adView setImages:[NSArray arrayWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"Images" ofType:@"plist"]]];
@@ -267,22 +264,6 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
     if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
         self.artworkImageView.contentMode = UIViewContentModeScaleAspectFit;
     
-    if ([[UIDevice currentDevice].systemVersion floatValue] >= 6) {
-        
-        self.blurredArtworkImageView = [[[UIImageView alloc] initWithFrame:self.artworkImageView.frame] autorelease];
-        self.blurredArtworkImageView.autoresizingMask = self.artworkImageView.autoresizingMask;
-        self.blurredArtworkImageView.contentMode = self.artworkImageView.contentMode;
-        self.blurredArtworkImageView.clipsToBounds = self.artworkImageView.clipsToBounds;
-        self.blurredArtworkImageView.alpha = 0.0;
-        
-        [self.artworkImageView.superview insertSubview:self.blurredArtworkImageView aboveSubview:self.artworkImageView];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(applicationDidBecomeActive:)
-                                                     name:UIApplicationDidBecomeActiveNotification
-                                                   object:nil];
-        
-    }
     
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(settingsUpdated:) name:SettingsUpdatedNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(batteryStateChanged:) name:UIDeviceBatteryStateDidChangeNotification object:nil];
@@ -298,7 +279,6 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
     [super viewDidUnload];
     
     self.adView = nil;
-    self.topView = self.bottomView = nil;
     self.artworkImageView = nil;
     self.trackTitelLabel = self.artistNameLabel = nil;
     
@@ -329,7 +309,6 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
                      animations:^{
                          
                          if (self.server && raop_server_is_recording(self.server)) {
-                             self.blurredArtworkImageView.alpha = 1.0;
                              self.artworkImageView.alpha = 0.5;
                          }
                          
@@ -353,7 +332,6 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
                      animations:^{
                          
                          if (self.server && raop_server_is_recording(self.server)) {
-                             self.blurredArtworkImageView.alpha = 0.0;
                              self.artworkImageView.alpha = 1.0;
                          }
                          
@@ -373,49 +351,23 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
     
 }
 
-- (IBAction)supportButtonTouchUpInside:(id)sender {
-    
-    BOOL visible = (_overlaidViewController != nil);
-    
-    if (!visible)
-        [self displayViewControllerAsOverlay:[[[SupportViewController alloc] init] autorelease]];
-    else
-        [self dismissOverlayViewController];
-    
-    [self.supportButton setTitle:(!visible ? @"Close" : @"Support")
-                        forState:UIControlStateNormal];
-    
-    self.settingsButton.userInteractionEnabled = visible;
-    
-    [UIView animateWithDuration:0.3
-                          delay:0.0
-                        options:UIViewAnimationOptionCurveEaseOut
-                     animations:^{
-                         self.settingsButton.alpha = (!visible ? 0.0 : 1.);
-                     } completion:nil];
-    
-}
 
 - (IBAction)settingsButtonTouchUpInside:(id)sender {
     
     BOOL visible = (_overlaidViewController != nil);
     
-    if (!visible)
+    UIBarButtonItem * barButton = sender;
+    
+    if (!visible) {
         [self displayViewControllerAsOverlay:[[[SettingsViewController alloc] init] autorelease]];
+        [barButton setTitle:@"Done"];
+    }
     else
+    {
         [self dismissOverlayViewController];
-    
-    [self.settingsButton setTitle:(!visible ? @"Close" : @"Settings")
-                         forState:UIControlStateNormal];
-    
-    self.supportButton.userInteractionEnabled = visible;
-    
-    [UIView animateWithDuration:0.3
-                          delay:0.0
-                        options:UIViewAnimationOptionCurveEaseOut
-                     animations:^{
-                         self.supportButton.alpha = (!visible ? 0.0 : 1.);
-                     } completion:nil];
+        [barButton setTitle:@"Settings"];
+
+    }
     
 }
 
@@ -429,16 +381,15 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
             
             if (self.trackTitelLabel.text) {
                 
-                [nowPlayingInfo setObject:self.trackTitelLabel.text forKey:MPMediaItemPropertyTitle];
+                nowPlayingInfo[MPMediaItemPropertyTitle] = self.trackTitelLabel.text;
                 if (self.artistNameLabel.text)
-                    [nowPlayingInfo setObject:self.artistNameLabel.text forKey:MPMediaItemPropertyArtist];
+                    nowPlayingInfo[MPMediaItemPropertyArtist] = self.artistNameLabel.text;
                 
                 if (_albumTitle)
-                    [nowPlayingInfo setObject:_albumTitle forKey:MPMediaItemPropertyAlbumTitle];
+                    nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = _albumTitle;
                 
                 if (_artworkImage)
-                    [nowPlayingInfo setObject:[[[MPMediaItemArtwork alloc] initWithImage:_artworkImage] autorelease]
-                                   forKey:MPMediaItemPropertyArtwork];
+                    nowPlayingInfo[MPMediaItemPropertyArtwork] = [[[MPMediaItemArtwork alloc] initWithImage:_artworkImage] autorelease];
                 
                 [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nowPlayingInfo;
                 
@@ -464,21 +415,15 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
     [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
     [self becomeFirstResponder];
     
-    CGRect topViewFrame = self.topView.frame;
-    topViewFrame.size.height = 96;
-    
     CGRect overlaidViewContainerFrame = self.overlaidViewContainer.frame;
     overlaidViewContainerFrame.origin.y = 47;
     overlaidViewContainerFrame.size.height = self.overlaidViewContainer.superview.bounds.size.height - 47;
     
-    self.blurredArtworkImageView.alpha = (_overlaidViewController != nil ? 1.0 : 0.0);
     
     [UIView animateWithDuration:0.5
                           delay:0.0
                         options:UIViewAnimationOptionCurveEaseOut
                      animations:^{
-                         self.topView.frame = topViewFrame;
-                         self.trackTitelLabel.alpha = self.artistNameLabel.alpha = 1.0;
                          self.overlaidViewContainer.frame = overlaidViewContainerFrame;
                      } completion:nil];
     
@@ -503,9 +448,6 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
     
     _dacp_client = NULL;
     
-    CGRect topViewFrame = self.topView.frame;
-    topViewFrame.size.height = 48;
-    
     CGRect overlaidViewContainerFrame = self.overlaidViewContainer.frame;
     overlaidViewContainerFrame.origin.y = 0;
     overlaidViewContainerFrame.size.height = self.overlaidViewContainer.superview.bounds.size.height;
@@ -514,8 +456,8 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
                           delay:0.0
                         options:UIViewAnimationOptionCurveEaseOut
                      animations:^{
-                         self.topView.frame = topViewFrame;
-                         self.trackTitelLabel.alpha = self.artistNameLabel.alpha = 0.0;
+                         self.trackTitelLabel.text = @"Not connected";
+                         self.artistNameLabel.text = @"Not connected";
                          self.overlaidViewContainer.frame = overlaidViewContainerFrame;
                      } completion:nil];
     
@@ -524,11 +466,8 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
                         options:UIViewAnimationOptionCurveEaseOut
                      animations:^{
                          self.artworkImageView.alpha = 0.0;
-                         self.blurredArtworkImageView.alpha = 0.0;
                      } completion:^(BOOL finished) {
-                         self.blurredArtworkImageView.alpha = 0.0;
                          self.artworkImageView.image = [UIImage imageNamed:@"NoArtwork.png"];
-                         self.blurredArtworkImageView.image = nil;
                          [_artworkImage release];
                          _artworkImage = nil;
                          [_albumTitle release];
@@ -573,10 +512,14 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
     }
     
     UIImage* actualImage = [image imageAspectedFilledWithSize:size];
-    UIImage* blurredImage = [actualImage imageGaussianBlurredWithRadius:10.0];
+    
+    CATransition *transition = [CATransition animation];
+    transition.duration = 0.3f;
+    transition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    transition.type = kCATransitionFade;
+    [self.artworkImageView.layer addAnimation:transition forKey:nil];
     
     [self.artworkImageView performSelectorOnMainThread:@selector(setImage:) withObject:actualImage waitUntilDone:NO];
-    [self.blurredArtworkImageView performSelectorOnMainThread:@selector(setImage:) withObject:blurredImage waitUntilDone:NO];
     
 }
 
@@ -626,29 +569,16 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
     
     BOOL isAvailable = (_dacp_client != NULL && dacp_client_is_available(_dacp_client));
     
-    UIButton* lastControl = [self.controlButtons lastObject];
     
-    if (isAvailable && lastControl.hidden) {
+    if (isAvailable) {
         for (UIButton* button in self.controlButtons) {
-            button.alpha = 0.0;
-            button.hidden = NO;
+            button.enabled = YES;
         }
-    }
+    } else {
+        for (UIButton* button in self.controlButtons) {
+            button.enabled = NO;
+        }    }
     
-    [UIView animateWithDuration:1.0
-                          delay:0.0
-                        options:UIViewAnimationOptionCurveEaseOut
-                     animations:^{
-                         
-                         for (UIButton* button in self.controlButtons)
-                             button.alpha = (isAvailable ? 1.0 : 0.0);
-                         
-                     } completion:^(BOOL finished) {
-                         
-                         for (UIButton* button in self.controlButtons)
-                             button.hidden = !isAvailable;
-                         
-                     }];
     
     if (isAvailable)
         dacp_client_update_playback_state(_dacp_client);
@@ -714,11 +644,11 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
 
 - (void)updateScreenIdleState {
     
-    BOOL disabled = [[AirFloatSharedAppDelegate.settings objectForKey:@"keepScreenLit"] boolValue];
+    BOOL disabled = [(AirFloatSharedAppDelegate.settings)[@"keepScreenLit"] boolValue];
     
-    disabled &= (![[AirFloatSharedAppDelegate.settings objectForKey:@"keepScreenLitOnlyWhenReceiving"] boolValue] || (_server != NULL && raop_server_is_recording(_server)));
+    disabled &= (![(AirFloatSharedAppDelegate.settings)[@"keepScreenLitOnlyWhenReceiving"] boolValue] || (_server != NULL && raop_server_is_recording(_server)));
     
-    disabled &= (![[AirFloatSharedAppDelegate.settings objectForKey:@"keepScreenLitOnlyWhenConnectedToPower"] boolValue] || ([UIDevice currentDevice].batteryState == UIDeviceBatteryStateCharging || [UIDevice currentDevice].batteryState == UIDeviceBatteryStateFull));
+    disabled &= (![(AirFloatSharedAppDelegate.settings)[@"keepScreenLitOnlyWhenConnectedToPower"] boolValue] || ([UIDevice currentDevice].batteryState == UIDeviceBatteryStateCharging || [UIDevice currentDevice].batteryState == UIDeviceBatteryStateFull));
     
     [UIApplication sharedApplication].idleTimerDisabled = disabled;
     

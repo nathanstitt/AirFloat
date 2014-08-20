@@ -48,4 +48,6 @@
 @property (nonatomic, assign) raop_server_p server;
 @property (nonatomic, strong) NSDictionary* settings;
 
+- (void)setSettings;
+
 @end

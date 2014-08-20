@@ -28,10 +28,10 @@
 //  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#import "PanelViewController.h"
-
 NSString *const SettingsUpdatedNotification;
 
-@interface SettingsViewController : PanelViewController
+#import <libairfloat/raopserver.h>
+
+@interface SettingsViewController : UIViewController
 
 @end

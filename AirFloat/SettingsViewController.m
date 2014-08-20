@@ -31,7 +31,6 @@
 #import "UIView+AirFloatAdditions.h"
 
 #import "AirFloatAppDelegate.h"
-#import "AirFloatSwitch.h"
 #import "SettingsViewController.h"
 
 NSString *const SettingsUpdatedNotification = @"SettingsUpdatedNotification";
@@ -39,19 +38,15 @@ NSString *const SettingsUpdatedNotification = @"SettingsUpdatedNotification";
 @interface SettingsViewController () <UITextFieldDelegate, UIScrollViewDelegate>
 
 @property (nonatomic, strong) IBOutlet UITextField* nameField;
-@property (nonatomic, strong) IBOutlet UIView* nameFieldHighlightedBackground;
-@property (nonatomic, strong) IBOutlet UIButton* nameClearButton;
 @property (nonatomic, strong) IBOutlet UITextField* authenticationField;
-@property (nonatomic, strong) IBOutlet UIView* authenticationFieldHighlightedBackground;
-@property (nonatomic, strong) IBOutlet UIButton* authenticationClearButton;
-@property (nonatomic, strong) IBOutlet AirFloatSwitch* authenticationEnabledSwitch;
-@property (nonatomic, strong) IBOutlet AirFloatSwitch* keepScreenLitSwitch;
+@property (nonatomic, strong) IBOutlet UISwitch* authenticationEnabledSwitch;
+@property (nonatomic, strong) IBOutlet UISwitch* keepScreenLitSwitch;
 @property (nonatomic, strong) IBOutlet UILabel* keepScreenLitOnlyWhenReceivingLabel;
-@property (nonatomic, strong) IBOutlet AirFloatSwitch* keepScreenLitOnlyWhenReceivingSwitch;
+@property (nonatomic, strong) IBOutlet UISwitch* keepScreenLitOnlyWhenReceivingSwitch;
 @property (nonatomic, strong) IBOutlet UILabel* keepScreenLitOnlyWhenConnectedToPowerLabel;
-@property (nonatomic, strong) IBOutlet AirFloatSwitch* keepScreenLitOnlyWhenConnectedToPowerSwitch;
+@property (nonatomic, strong) IBOutlet UISwitch* keepScreenLitOnlyWhenConnectedToPowerSwitch;
 
-- (void)updateVisuals:(NSDictionary *)visuals;
+- (void)updateVisuals;
 
 @end
 
@@ -63,16 +58,16 @@ NSString *const SettingsUpdatedNotification = @"SettingsUpdatedNotification";
     
     ((UIScrollView*)self.view).contentSize = CGSizeMake(320, 358);
     
-    NSDictionary* settings = AirFloatSharedAppDelegate.settings;
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     
-    self.nameField.text = [settings objectForKey:@"name"];
-    self.authenticationField.text = [settings objectForKey:@"password"];
-    self.authenticationEnabledSwitch.on = [[settings objectForKey:@"authenticationEnabled"] boolValue];
-    self.keepScreenLitSwitch.on = [[settings objectForKey:@"keepScreenLit"] boolValue];
-    self.keepScreenLitOnlyWhenReceivingSwitch.on = [[settings objectForKey:@"keepScreenLitOnlyWhenReceiving"] boolValue];
-    self.keepScreenLitOnlyWhenConnectedToPowerSwitch.on = [[settings objectForKey:@"keepScreenLitOnlyWhenConnectedToPower"] boolValue];
+    self.nameField.text = [defaults objectForKey:@"name"];
+    self.authenticationField.text = [defaults objectForKey:@"password"];
+    self.authenticationEnabledSwitch.on = [defaults integerForKey:@"authenticationEnabled"];
+    self.keepScreenLitSwitch.on = [defaults integerForKey:@"keepScreenLit"];
+    self.keepScreenLitOnlyWhenReceivingSwitch.on = [defaults integerForKey:@"keepScreenLitOnlyWhenReceiving"];
+    self.keepScreenLitOnlyWhenConnectedToPowerSwitch.on = [defaults integerForKey:@"keepScreenLitOnlyWhenConnectedToPower"];
     
-    [self updateVisuals:settings];
+    [self updateVisuals];
     
     [self.authenticationEnabledSwitch addTarget:self action:@selector(authenticationSwitchValueChanged:) forControlEvents:UIControlEventValueChanged];
     [self.keepScreenLitSwitch addTarget:self action:@selector(litSwitchChangedValue:) forControlEvents:UIControlEventValueChanged];
@@ -85,7 +80,7 @@ NSString *const SettingsUpdatedNotification = @"SettingsUpdatedNotification";
     
     [super viewWillAppear:animated];
     
-    [self centerContent];
+    //[self centerContent];
     
 }
 
@@ -98,16 +93,8 @@ NSString *const SettingsUpdatedNotification = @"SettingsUpdatedNotification";
     
 }
 
-- (IBAction)clearButtonTouchedUpInside:(id)sender {
-    
-    UITextField* textField = (sender == self.nameClearButton ? self.nameField : self.authenticationField);
-    
-    textField.text = @"";
-    [textField becomeFirstResponder];
-    
-}
 
-- (void)updateVisuals:(NSDictionary *)settings {
+- (void)updateVisuals {
     
     self.keepScreenLitOnlyWhenReceivingSwitch.userInteractionEnabled = self.keepScreenLitOnlyWhenConnectedToPowerSwitch.userInteractionEnabled = self.keepScreenLitSwitch.on;
     
@@ -122,35 +109,35 @@ NSString *const SettingsUpdatedNotification = @"SettingsUpdatedNotification";
 
 - (void)updateSettings {
     
-    NSMutableDictionary* settings = [[NSMutableDictionary alloc] init];
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     
     if (self.nameField.text)
-        [settings setObject:self.nameField.text forKey:@"name"];
+        [defaults setObject:self.nameField.text forKey:@"name"];
     
     if (self.authenticationField.text)
-        [settings setObject:self.authenticationField.text forKey:@"password"];
+        [defaults setObject:self.authenticationField.text forKey:@"password"];
     
     if (self.authenticationEnabledSwitch.on)
-        [settings setObject:[NSNumber numberWithBool:self.authenticationEnabledSwitch.on] forKey:@"authenticationEnabled"];
+        [defaults setInteger:self.authenticationEnabledSwitch.on forKey:@"authenticationEnabled"];
     
     if (self.keepScreenLitSwitch.on) {
         
-        [settings setObject:[NSNumber numberWithBool:self.keepScreenLitSwitch.on] forKey:@"keepScreenLit"];
+        [defaults setInteger:self.keepScreenLitSwitch.on forKey:@"keepScreenLit"];
         
         if (self.keepScreenLitOnlyWhenReceivingSwitch.on)
-            [settings setObject:[NSNumber numberWithBool:self.keepScreenLitOnlyWhenReceivingSwitch.on] forKey:@"keepScreenLitOnlyWhenReceiving"];
-        if (self.keepScreenLitOnlyWhenConnectedToPowerSwitch.on)
-            [settings setObject:[NSNumber numberWithBool:self.keepScreenLitOnlyWhenConnectedToPowerSwitch.on] forKey:@"keepScreenLitOnlyWhenConnectedToPower"];
+            [defaults setInteger:self.keepScreenLitOnlyWhenReceivingSwitch.on forKey:@"keepScreenLitOnlyWhenReceiving"];
         
+        if (self.keepScreenLitOnlyWhenConnectedToPowerSwitch.on)
+            [defaults setInteger:self.keepScreenLitOnlyWhenConnectedToPowerSwitch.on forKey:@"keepScreenLitOnlyWhenConnectedToPower"];
     }
     
-    AirFloatSharedAppDelegate.settings = settings;
+    [AirFloatSharedAppDelegate setSettings];
     
-    [self updateVisuals:settings];
+    [defaults synchronize];
+
+    [self updateVisuals];
     
-    [[NSNotificationCenter defaultCenter] postNotificationName:SettingsUpdatedNotification object:nil userInfo:settings];
     
-    [settings release];
     
 }
 
@@ -183,45 +170,11 @@ NSString *const SettingsUpdatedNotification = @"SettingsUpdatedNotification";
     
 }
 
-- (void)textFieldDidBeginEditing:(UITextField *)textField {
-    
-    UIButton* clearButton = (textField == self.nameField ? self.nameClearButton : self.authenticationClearButton);
-    UIView* highlightedBackgroundView = (textField == self.nameField ? self.nameFieldHighlightedBackground : self.authenticationFieldHighlightedBackground);
-    
-    if (clearButton.hidden) {
-        clearButton.alpha = 0.0;
-        clearButton.hidden = NO;
-    
-        [UIView animateWithDuration:0.5
-                              delay:0.0
-                            options:UIViewAnimationOptionCurveEaseOut
-                         animations:^{
-                             clearButton.alpha = 1.0;
-                             highlightedBackgroundView.alpha = 1.0;
-                         } completion:nil];
-        
-    }
-    
-}
 
 - (void)textFieldDidEndEditing:(UITextField *)textField {
     
-    UIButton* clearButton = (textField == self.nameField ? self.nameClearButton : self.authenticationClearButton);
-    UIView* highlightedBackgroundView = (textField == self.nameField ? self.nameFieldHighlightedBackground : self.authenticationFieldHighlightedBackground);
     
     [self updateSettings];
-    
-    [UIView animateWithDuration:0.5
-                          delay:0.0
-                        options:UIViewAnimationOptionCurveEaseOut
-                     animations:^{
-                         highlightedBackgroundView.alpha = 0.0;
-                         if ([textField.text length] == 0)
-                             clearButton.alpha = 0.0;
-                     } completion:^(BOOL finished) {
-                         if ([textField.text length] == 0)
-                             clearButton.hidden = YES;
-                     }];
     
     if (textField == self.authenticationField && [self.authenticationField.text length] == 0)
         [self.authenticationEnabledSwitch setOn:NO animated:YES];
