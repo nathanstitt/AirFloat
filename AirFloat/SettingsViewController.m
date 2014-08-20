@@ -117,8 +117,8 @@ NSString *const SettingsUpdatedNotification = @"SettingsUpdatedNotification";
     if (self.authenticationField.text)
         [defaults setObject:self.authenticationField.text forKey:@"password"];
     
-    if (self.authenticationEnabledSwitch.on)
         [defaults setInteger:self.authenticationEnabledSwitch.on forKey:@"authenticationEnabled"];
+
     
     if (self.keepScreenLitSwitch.on) {
         
