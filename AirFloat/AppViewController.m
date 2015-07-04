@@ -492,10 +492,10 @@ void newServerSession(raop_server_p server, raop_session_p new_session, void* ct
 
 - (void)clientEnded {
     
-    if ([UIApplication sharedApplication].applicationState == UIApplicationStateBackground && backgroundTask > 0) {
-        raop_server_stop(self.server);
-        [self performSelector:@selector(stopBackgroundTask) withObject:nil afterDelay:1.0];
-    }
+//    if ([UIApplication sharedApplication].applicationState == UIApplicationStateBackground && backgroundTask > 0) {
+//        raop_server_stop(self.server);
+//        [self performSelector:@selector(stopBackgroundTask) withObject:nil afterDelay:1.0];
+//    }
     
 }
 
